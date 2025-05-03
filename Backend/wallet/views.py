@@ -7,6 +7,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework import generics, status
 from .models import Wallet, Transaction
 from web3 import Web3
+from eth_account import Account
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from django.http import JsonResponse
@@ -115,21 +116,33 @@ class WalletDashboardView(APIView):
         })
 
 
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from web3 import Web3
+from eth_account import Account
+from decimal import Decimal
+import json
+from .models import Wallet, Transaction
+
 class SendCryptoView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
+            # 1. Validate and get data
             wallet = Wallet.objects.get(user=request.user)
             amount = Decimal(request.data.get('amount', 0))
             to_address = request.data.get('address', '').strip()
 
             if not all([amount > 0, to_address, Web3.is_address(to_address)]):
                 return Response(
-                    {'error': 'Invalid amount or recipient address'}, 
+                    {'error': 'Invalid amount or recipient address'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            # 2. Initialize Web3
             w3 = Web3(Web3.HTTPProvider('https://eth-sepolia.g.alchemy.com/v2/'))
             if not w3.is_connected():
                 return Response(
@@ -137,26 +150,40 @@ class SendCryptoView(APIView):
                     status=status.HTTP_503_SERVICE_UNAVAILABLE
                 )
 
+            # 3. Prepare transaction
             tx = {
-                'chainId': 11155111,  
+                'chainId': 11155111,
                 'to': to_address,
                 'value': w3.to_wei(str(amount), 'ether'),
-                'gas': 21000,  
+                'gas': 21000,
                 'gasPrice': w3.eth.gas_price,
                 'nonce': w3.eth.get_transaction_count(wallet.public_address),
             }
 
-            
+            # 4. Universal signing approach
             try:
-               
-                try:
-                    signed_tx = w3.eth.account.sign_transaction(tx, wallet.private_key)
-                    tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-                except AttributeError:
-                    
-                    signed_tx = w3.eth.account.signTransaction(tx, wallet.private_key)
-                    tx_hash = w3.eth.sendRawTransaction(signed_tx.rawTransaction)
+                private_key = wallet.private_key
+                if private_key.startswith('0x'):
+                    private_key = private_key[2:]
+                
+                # Version-agnostic signing
+                account = Account.from_key(private_key)
+                signed_tx = account.sign_transaction(tx)
+                
+                # Handle different Web3.py versions
+                if hasattr(signed_tx, 'rawTransaction'):
+                    raw_tx = signed_tx.rawTransaction
+                elif hasattr(signed_tx, 'raw_transaction'):
+                    raw_tx = signed_tx.raw_transaction
+                else:
+                    raw_tx = signed_tx['rawTransaction'] if isinstance(signed_tx, dict) else None
+                
+                if not raw_tx:
+                    raise ValueError("Could not extract raw transaction data")
 
+                tx_hash = w3.eth.send_raw_transaction(raw_tx)
+
+                # 5. Save transaction
                 Transaction.objects.create(
                     wallet=wallet,
                     tx_hash=tx_hash.hex(),
@@ -171,17 +198,17 @@ class SendCryptoView(APIView):
                 return Response({
                     'status': 'Transaction submitted',
                     'tx_hash': tx_hash.hex(),
-                    'explorer_url': f'https://sepolia.basescan.org/tx/{tx_hash.hex()}'
+                    'explorer_url': f'https://sepolia.etherscan.org/tx/{tx_hash.hex()}'
                 })
 
             except ValueError as e:
                 error_msg = str(e)
-                if 'insufficient funds' in error_msg.lower():
+                if any(msg in error_msg.lower() for msg in ['insufficient funds', 'gas required exceeds allowance']):
                     return Response(
-                        {'error': 'Insufficient funds for gas + value'},
+                        {'error': 'Insufficient funds for transaction'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-                return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': f'Transaction signing failed: {error_msg}'}, status=status.HTTP_400_BAD_REQUEST)
 
         except Wallet.DoesNotExist:
             return Response(
@@ -190,6 +217,6 @@ class SendCryptoView(APIView):
             )
         except Exception as e:
             return Response(
-                {'error': f'Unexpected error: {str(e)}'},
+                {'error': f'Transaction failed: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
