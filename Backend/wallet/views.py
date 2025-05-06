@@ -4,16 +4,23 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
-from .models import Wallet, Transaction
+from .models import Wallet, Transaction, Token
 from web3 import Web3
+from web3.contract import Contract
 from eth_account import Account
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from django.http import JsonResponse
 from .serializers import UserSerializer
 from decimal import Decimal
-
+import requests
+import json
+import hmac
+import hashlib
+import os
+from dotenv import load_dotenv
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -116,15 +123,96 @@ class WalletDashboardView(APIView):
         })
 
 
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
-from web3 import Web3
-from eth_account import Account
-from decimal import Decimal
-import json
-from .models import Wallet, Transaction
+
+# class SendCryptoView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request):
+#         try:
+#             # 1. Validate and get data
+#             wallet = Wallet.objects.get(user=request.user)
+#             amount = Decimal(request.data.get('amount', 0))
+#             to_address = request.data.get('address', '').strip()
+
+#             if not all([amount > 0, to_address, Web3.is_address(to_address)]):
+#                 return Response(
+#                     {'error': 'Invalid amount or recipient address'},
+#                     status=status.HTTP_400_BAD_REQUEST
+#                 )
+
+#             w3 = Web3(Web3.HTTPProvider('https://eth-sepolia.g.alchemy.com/v2/uYsrS-5v-ATSnYr6ao0GNDaYNyu8v38E'))
+#             if not w3.is_connected():
+#                 return Response(
+#                     {'error': 'Failed to connect to blockchain'},
+#                     status=status.HTTP_503_SERVICE_UNAVAILABLE
+#                 )
+
+#             tx = {
+#                 'chainId': 11155111,
+#                 'to': to_address,
+#                 'value': w3.to_wei(str(amount), 'ether'),
+#                 'gas': 21000,
+#                 'gasPrice': w3.eth.gas_price,
+#                 'nonce': w3.eth.get_transaction_count(wallet.public_address),
+#             }
+
+#             try:
+#                 private_key = wallet.private_key
+#                 if private_key.startswith('0x'):
+#                     private_key = private_key[2:]
+                
+#                 account = Account.from_key(private_key)
+#                 signed_tx = account.sign_transaction(tx)
+                
+#                 if hasattr(signed_tx, 'rawTransaction'):
+#                     raw_tx = signed_tx.rawTransaction
+#                 elif hasattr(signed_tx, 'raw_transaction'):
+#                     raw_tx = signed_tx.raw_transaction
+#                 else:
+#                     raw_tx = signed_tx['rawTransaction'] if isinstance(signed_tx, dict) else None
+                
+#                 if not raw_tx:
+#                     raise ValueError("Could not extract raw transaction data")
+
+#                 tx_hash = w3.eth.send_raw_transaction(raw_tx)
+
+#                 Transaction.objects.create(
+#                     wallet=wallet,
+#                     tx_hash=tx_hash.hex(),
+#                     amount=-amount,
+#                     to_address=to_address,
+#                     status='PENDING'
+#                 )
+
+#                 wallet.balance -= amount
+#                 wallet.save()
+
+#                 return Response({
+#                     'status': 'Transaction submitted',
+#                     'tx_hash': tx_hash.hex(),
+#                     'explorer_url': f'https://sepolia.etherscan.org/tx/{tx_hash.hex()}'
+#                 })
+
+#             except ValueError as e:
+#                 error_msg = str(e)
+#                 if any(msg in error_msg.lower() for msg in ['insufficient funds', 'gas required exceeds allowance']):
+#                     return Response(
+#                         {'error': 'Insufficient funds for transaction'},
+#                         status=status.HTTP_400_BAD_REQUEST
+#                     )
+#                 return Response({'error': f'Transaction signing failed: {error_msg}'}, status=status.HTTP_400_BAD_REQUEST)
+
+#         except Wallet.DoesNotExist:
+#             return Response(
+#                 {'error': 'Wallet not found'},
+#                 status=status.HTTP_404_NOT_FOUND
+#             )
+#         except Exception as e:
+#             return Response(
+#                 {'error': f'Transaction failed: {str(e)}'},
+#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#             )
+
 
 class SendCryptoView(APIView):
     permission_classes = [IsAuthenticated]
@@ -135,6 +223,7 @@ class SendCryptoView(APIView):
             wallet = Wallet.objects.get(user=request.user)
             amount = Decimal(request.data.get('amount', 0))
             to_address = request.data.get('address', '').strip()
+            token_symbol = request.data.get('token', 'ETH').upper()
 
             if not all([amount > 0, to_address, Web3.is_address(to_address)]):
                 return Response(
@@ -142,63 +231,107 @@ class SendCryptoView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # 2. Initialize Web3
-            w3 = Web3(Web3.HTTPProvider('https://eth-sepolia.g.alchemy.com/v2/'))
+            w3 = Web3(Web3.HTTPProvider('https://eth-sepolia.g.alchemy.com/v2/uYsrS-5v-ATSnYr6ao0GNDaYNyu8v38E'))
             if not w3.is_connected():
                 return Response(
                     {'error': 'Failed to connect to blockchain'},
                     status=status.HTTP_503_SERVICE_UNAVAILABLE
                 )
 
-            # 3. Prepare transaction
-            tx = {
-                'chainId': 11155111,
-                'to': to_address,
-                'value': w3.to_wei(str(amount), 'ether'),
-                'gas': 21000,
-                'gasPrice': w3.eth.gas_price,
-                'nonce': w3.eth.get_transaction_count(wallet.public_address),
-            }
+            # 2. Handle ETH or Token transfer
+            if token_symbol == 'ETH':
+                tx = {
+                    'chainId': 11155111,
+                    'to': to_address,
+                    'value': w3.to_wei(str(amount), 'ether'),
+                    'gas': 21000,
+                    'gasPrice': w3.eth.gas_price,
+                    'nonce': w3.eth.get_transaction_count(wallet.public_address),
+                }
+            else:
+                # Handle ERC-20 token transfer
+                try:
+                    token = Token.objects.get(symbol=token_symbol)
+                except Token.DoesNotExist:
+                    return Response(
+                        {'error': 'Token not supported'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
-            # 4. Universal signing approach
+                # Load ERC-20 ABI
+                with open('erc20_abi.json') as f:
+                    erc20_abi = json.load(f)
+
+                # Create contract instance
+                contract = w3.eth.contract(address=token.contract_address, abi=erc20_abi)
+                
+                # Prepare transfer data
+                transfer_data = contract.encodeABI(
+                    fn_name='transfer',
+                    args=[to_address, w3.to_wei(str(amount), token.decimals)]
+                )
+
+                # Estimate gas
+                try:
+                    gas_estimate = contract.functions.transfer(
+                        to_address,
+                        w3.to_wei(str(amount), token.decimals)
+                    ).estimate_gas({
+                        'from': wallet.public_address
+                    })
+                except Exception as e:
+                    return Response(
+                        {'error': f'Gas estimation failed: {str(e)}'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                tx = {
+                    'chainId': 11155111,
+                    'to': token.contract_address,
+                    'value': 0,
+                    'gas': gas_estimate,
+                    'gasPrice': w3.eth.gas_price,
+                    'nonce': w3.eth.get_transaction_count(wallet.public_address),
+                    'data': transfer_data
+                }
+
+            # 3. Sign and send transaction
             try:
                 private_key = wallet.private_key
                 if private_key.startswith('0x'):
                     private_key = private_key[2:]
                 
-                # Version-agnostic signing
                 account = Account.from_key(private_key)
                 signed_tx = account.sign_transaction(tx)
                 
-                # Handle different Web3.py versions
-                if hasattr(signed_tx, 'rawTransaction'):
-                    raw_tx = signed_tx.rawTransaction
-                elif hasattr(signed_tx, 'raw_transaction'):
-                    raw_tx = signed_tx.raw_transaction
-                else:
-                    raw_tx = signed_tx['rawTransaction'] if isinstance(signed_tx, dict) else None
+                raw_tx = getattr(signed_tx, 'rawTransaction', 
+                               getattr(signed_tx, 'raw_transaction', 
+                                      signed_tx.get('rawTransaction') if isinstance(signed_tx, dict) else None))
                 
                 if not raw_tx:
                     raise ValueError("Could not extract raw transaction data")
 
                 tx_hash = w3.eth.send_raw_transaction(raw_tx)
 
-                # 5. Save transaction
+                # 4. Save transaction record
                 Transaction.objects.create(
                     wallet=wallet,
                     tx_hash=tx_hash.hex(),
                     amount=-amount,
                     to_address=to_address,
+                    token_symbol=token_symbol,
                     status='PENDING'
                 )
 
-                wallet.balance -= amount
-                wallet.save()
+                # 5. Update balance (for ETH only - token balances tracked separately)
+                if token_symbol == 'ETH':
+                    wallet.balance -= amount
+                    wallet.save()
 
                 return Response({
                     'status': 'Transaction submitted',
                     'tx_hash': tx_hash.hex(),
-                    'explorer_url': f'https://sepolia.etherscan.org/tx/{tx_hash.hex()}'
+                    'explorer_url': f'https://sepolia.etherscan.io/tx/{tx_hash.hex()}'
                 })
 
             except ValueError as e:
@@ -220,3 +353,233 @@ class SendCryptoView(APIView):
                 {'error': f'Transaction failed: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        
+
+class TokenBalanceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            wallet = Wallet.objects.get(user=request.user)
+            w3 = Web3(Web3.HTTPProvider(settings.WEB3_PROVIDER))
+            
+            # Load ERC-20 ABI
+            with open('erc20_abi.json') as f:
+                erc20_abi = json.load(f)
+            
+            balances = []
+            
+            # Add ETH balance first
+            eth_balance = w3.from_wei(w3.eth.get_balance(wallet.public_address), 'ether')
+            balances.append({
+                'symbol': 'ETH',
+                'balance': str(eth_balance),
+                'contractAddress': ''
+            })
+            
+            # Get token balances
+            tokens = Token.objects.filter(network='sepolia')
+            for token in tokens:
+                contract = w3.eth.contract(address=token.contract_address, abi=erc20_abi)
+                balance = contract.functions.balanceOf(wallet.public_address).call()
+                normalized_balance = balance / (10 ** token.decimals)
+                
+                balances.append({
+                    'symbol': token.symbol,
+                    'balance': str(normalized_balance),
+                    'contractAddress': token.contract_address
+                })
+            
+            return Response(balances)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to fetch balances: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+
+class YellowCardOnRampView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = YellowCardOnRampSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        wallet = Wallet.objects.get(user=request.user)
+        
+        payload = {
+            "reference": f"OVAL_{request.user.id}_{int(time.time())}",
+            "customer": {
+                "email": request.user.email,
+                "name": f"{request.user.first_name} {request.user.last_name}"
+            },
+            "currency": serializer.validated_data['currency'],
+            "requestedAmount": float(serializer.validated_data['amount']),
+            "paymentMethod": serializer.validated_data['payment_method'],
+            "redirectUrl": serializer.validated_data['return_url'],
+            "settlementWallet": wallet.public_address,
+            "metadata": {
+                "user_id": request.user.id,
+                "wallet_address": wallet.public_address
+            }
+        }
+
+        headers = {
+            "Content-Type": "application/json",
+            "X-API-KEY": settings.YELLOWCARD_API_KEY
+        }
+
+        try:
+            response = requests.post(
+                f"{settings.YELLOWCARD_BASE_URL}/transactions/on-ramp",
+                json=payload,
+                headers=headers
+            )
+            response.raise_for_status()
+            return Response(response.json(), status=status.HTTP_201_CREATED)
+        except requests.exceptions.RequestException as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+
+
+class YellowCardOffRampView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = YellowCardOffRampSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        wallet = Wallet.objects.get(user=request.user)
+        
+        # First verify wallet has sufficient balance
+        wallet.sync_balance()
+        if wallet.balance < Decimal(serializer.validated_data['amount']):
+            return Response(
+                {"error": "Insufficient wallet balance"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        payload = {
+            "reference": f"OVAL_OFF_{request.user.id}_{int(time.time())}",
+            "customer": {
+                "email": request.user.email,
+                "name": f"{request.user.first_name} {request.user.last_name}"
+            },
+            "currency": serializer.validated_data['currency'],
+            "amount": float(serializer.validated_data['amount']),
+            "bankAccount": serializer.validated_data['bank_account'],
+            "narration": serializer.validated_data.get('narration', 'Withdrawal from Oval'),
+            "sourceWallet": wallet.public_address,
+            "metadata": {
+                "user_id": request.user.id,
+                "wallet_address": wallet.public_address
+            }
+        }
+
+        headers = {
+            "Content-Type": "application/json",
+            "X-API-KEY": settings.YELLOWCARD_API_KEY
+        }
+
+        try:
+            response = requests.post(
+                f"{settings.YELLOWCARD_BASE_URL}/transactions/off-ramp",
+                json=payload,
+                headers=headers
+            )
+            response.raise_for_status()
+            
+            # Deduct from wallet balance immediately
+            wallet.balance -= Decimal(serializer.validated_data['amount'])
+            wallet.save()
+            
+            # Create transaction record
+            Transaction.objects.create(
+                wallet=wallet,
+                tx_hash=response.json().get('id'),
+                amount=-Decimal(serializer.validated_data['amount']),
+                to_address=f"BANK:{serializer.validated_data['bank_account']}",
+                status='PENDING',
+                is_off_ramp=True
+            )
+            
+            return Response(response.json(), status=status.HTTP_201_CREATED)
+        except requests.exceptions.RequestException as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+
+
+@csrf_exempt
+@api_view(['POST'])
+def yellowcard_webhook(request):
+    # Verify webhook signature
+    signature = request.headers.get('X-Yellowcard-Signature')
+    if not signature:
+        return Response(status=status.HTTP_401_UNAUTHORIZED)
+    
+    expected_signature = hmac.new(
+        settings.YELLOWCARD_WEBHOOK_SECRET.encode(),
+        request.body,
+        hashlib.sha256
+    ).hexdigest()
+    
+    if not hmac.compare_digest(signature, expected_signature):
+        return Response(status=status.HTTP_401_UNAUTHORIZED)
+    
+    data = json.loads(request.body)
+    event_type = data.get('event')
+    transaction_data = data.get('data', {})
+    
+    if event_type == 'onramp.success':
+        # Handle successful on-ramp
+        try:
+            wallet = Wallet.objects.get(public_address=transaction_data.get('settlementWallet'))
+            amount = Decimal(transaction_data.get('settledAmount', 0))
+            
+            wallet.balance += amount
+            wallet.save()
+            
+            Transaction.objects.create(
+                wallet=wallet,
+                tx_hash=transaction_data.get('id'),
+                amount=amount,
+                to_address=wallet.public_address,
+                status='COMPLETED',
+                is_on_ramp=True
+            )
+        except Wallet.DoesNotExist:
+            pass
+    
+    elif event_type == 'offramp.success':
+        # Handle successful off-ramp
+        try:
+            transaction = Transaction.objects.get(tx_hash=transaction_data.get('id'))
+            transaction.status = 'COMPLETED'
+            transaction.save()
+        except Transaction.DoesNotExist:
+            pass
+    
+    elif event_type in ['onramp.failed', 'offramp.failed']:
+        # Handle failed transactions
+        try:
+            transaction = Transaction.objects.get(tx_hash=transaction_data.get('id'))
+            transaction.status = 'FAILED'
+            transaction.save()
+            
+            # For failed off-ramp, refund the wallet
+            if event_type == 'offramp.failed':
+                wallet = transaction.wallet
+                wallet.balance += abs(transaction.amount)
+                wallet.save()
+        except Transaction.DoesNotExist:
+            pass
+    
+    return Response(status=status.HTTP_200_OK)

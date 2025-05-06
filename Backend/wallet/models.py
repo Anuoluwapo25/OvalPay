@@ -87,3 +87,19 @@ class Transaction(models.Model):
             self.wallet.balance += self.amount
             self.wallet.save()
         super().save(*args, **kwargs)
+
+
+class Token(models.Model):
+    symbol = models.CharField(max_length=10, unique=True)
+    name = models.CharField(max_length=100)
+    contract_address = models.CharField(max_length=42)
+    decimals = models.PositiveSmallIntegerField(default=18)
+    is_active = models.BooleanField(default=True)
+    network = models.CharField(max_length=20, default='sepolia')  # or 'mainnet'
+
+
+    class Meta:
+        unique_together = ('symbol', 'network')
+
+    def __str__(self):
+        return f"{self.symbol} ({self.network})"
