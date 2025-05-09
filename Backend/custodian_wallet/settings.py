@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 FERNET_KEY = os.getenv('FERNET_KEY')
 INFURA_PROJECT_ID = os.getenv('INFURA_PROJECT_ID')
+ALCHEMY_PROJECT_ID =  os.getenv('ALCHEMY_PROJECT_ID')
 
 
 
@@ -51,8 +52,13 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'wallet',
+
   
 ]
+
+# MIGRATION_MODULES = {
+#     'auth': None,  
+# }
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -93,6 +99,10 @@ REST_FRAMEWORK = {
     #     'rest_framework.permissions.IsAuthenticated',
     # ]
 }
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 WSGI_APPLICATION = 'custodian_wallet.wsgi.application'
 
@@ -150,3 +160,25 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # For production
+# # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For development
+# EMAIL_HOST = 'your-smtp-server.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your-email@example.com'
+# EMAIL_HOST_PASSWORD = 'your-email-password'
+
+
+EMAIL_HOST = 'live.smtp.mailtrap.io'
+EMAIL_HOST_USER = 'api'
+EMAIL_HOST_PASSWORD ='f34f0ac8d634eda55001a833603adf23'
+EMAIL_PORT = '587'
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'no-reply@demomailtrap.co'
+
+FRONTEND_URL = 'http://localhost:3000'  # Change to your frontend URL
+
+
+

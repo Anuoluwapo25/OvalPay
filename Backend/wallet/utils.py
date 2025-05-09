@@ -1,10 +1,9 @@
-# wallet/utils.py
 from web3 import Web3
 from decimal import Decimal
 from django.conf import settings
 
 def get_actual_balance(wallet_address):
-    infura_url = f"https://eth-sepolia.g.alchemy.com/v2/{settings.INFURA_PROJECT_ID}"
+    infura_url = f"https://base-sepolia.g.alchemy.com/v2/{settings.ALCHEMY_API_KEY}"
     w3 = Web3(Web3.HTTPProvider(infura_url))
     
     try:
@@ -14,3 +13,5 @@ def get_actual_balance(wallet_address):
     except Exception as e:
         print(f"Error fetching balance: {str(e)}")
         return None  
+
+        

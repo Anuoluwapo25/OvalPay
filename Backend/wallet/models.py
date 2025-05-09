@@ -45,6 +45,8 @@ class Wallet(models.Model):
             self.save()
         return self.balance
 
+    
+
     def __str__(self):
         return f"{self.user.username}'s {self.name} ({self.public_address})"
 
@@ -75,6 +77,7 @@ class Transaction(models.Model):
     tx_hash = models.CharField(max_length=66, unique=True)
     amount = models.DecimalField(max_digits=36, decimal_places=18)
     to_address = models.CharField(max_length=42)
+    token_symbol = models.CharField(max_length=10, default='ETH')
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
