@@ -27,7 +27,7 @@ const TransactionsList: React.FC<TransactionsListProps> = ({ transactions }) => 
         <p className="text-gray-400">No transactions yet</p>
       ) : (
         <div className="space-y-4">
-          {transactions.map((tx) => (
+          {transactions.slice(0, 5).map((tx) => (
             <div key={tx.tx_hash} className="border-b border-gray-700 pb-4">
               <div className="flex justify-between">
                 <div>

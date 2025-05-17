@@ -36,7 +36,6 @@ function Register() {
         password2: formData.password2
       });
       
-      // After successful registration, redirect to login
       navigate('/login');
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -111,7 +110,7 @@ function Register() {
         </div>
         <button
           type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+          className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600"
         >
           Register
         </button>

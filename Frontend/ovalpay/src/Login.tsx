@@ -17,7 +17,7 @@ function Login() {
       });
       
       localStorage.setItem('token', response.data.token);
-      navigate('/create-wallet'); // Redirect to wallet page after login
+      navigate('/create-wallet'); 
     } catch (err) {
       setError('Invalid credentials. Please try again.');
       console.error('Login error:', err);
@@ -57,7 +57,7 @@ function Login() {
         </div>
         <button
           type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+          className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600"
         >
           Login
         </button>

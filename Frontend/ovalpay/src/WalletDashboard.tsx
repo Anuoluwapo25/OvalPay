@@ -89,7 +89,7 @@ export const WalletDashboard = () => {
       {/* Header */}
       <div className="bg-black p-4 border-b border-gray-800">
         <div className="flex justify-between items-center max-w-6xl mx-auto">
-          <h1 className="font-bold text-2xl text-green-400">CryptoWallet</h1>
+          <h1 className="font-bold text-2xl text-green-400">Ppay</h1>
           <div className="flex space-x-2">
             <button className="bg-gray-800 p-2 rounded-full">
               <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -115,9 +115,8 @@ export const WalletDashboard = () => {
         {activeModal === 'send' && (
           <SendForm
             tokens={tokens}
-            onSubmit={handleSend}
             onClose={() => setActiveModal(null)}
-            isLoading={loading.send}
+            
           />
         )}
 

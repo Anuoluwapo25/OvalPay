@@ -31,8 +31,9 @@ BASE_SEPOLIA_EXPLORER_URL = 'https://sepolia.basescan.org/tx'
 
 
 STABLECOIN_CONTRACTS = {
-    'usdc': '0x036CbD53842c5426634e7929541eC2318f3dCF7e',  
-    'usdt': '0x7c743Ab174879613Df7A7dC9EA5A96Ef97401dF7'   
+    'usdc': '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+    'usdt': '0x22c0DB4CC9B339E34956A5699E5E95dC0E00c800',
+
 }
 
 ERC20_ABI = [
@@ -196,7 +197,7 @@ class SendCryptoView(APIView):
                     amount=-amount,
                     to_address=to_address,
                     token_symbol=token.upper(),
-                    status='PENDING'
+                    status='COMPLETED'
                 )
 
                 if token == 'eth':
@@ -270,6 +271,78 @@ class WalletDashboardView(APIView):
                 } for tx in transactions
             ]
         })
+
+
+# class WalletDashboardView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request):
+#         try:
+#             wallet = Wallet.objects.get(user=request.user)
+            
+#             # Add error handling for balance sync
+#             try:
+#                 wallet.sync_balance()
+#             except Exception as sync_error:
+#                 print(f"Balance sync failed, using cached values: {str(sync_error)}")
+#                 # Continue with potentially stale data rather than failing completely
+            
+#             w3 = Web3(Web3.HTTPProvider(BASE_SEPOLIA_RPC_URL))
+#             if not w3.is_connected():
+#                 return Response(
+#                     {'error': 'Failed to connect to blockchain'},
+#                     status=status.HTTP_503_SERVICE_UNAVAILABLE
+#                 )
+
+#             # Initialize balances with cached values first
+#             balances = {
+#                 'eth': str(wallet.balance),
+#                 'usdc': '0',
+#                 'usdt': '0'
+#             }
+            
+#             # Try to fetch token balances with proper error handling
+#             for token in ['usdc', 'usdt']:
+#                 try:
+#                     if token in STABLECOIN_CONTRACTS:
+#                         contract = w3.eth.contract(
+#                             address=STABLECOIN_CONTRACTS[token],
+#                             abi=ERC20_ABI
+#                         )
+#                         balance = contract.functions.balanceOf(wallet.public_address).call()
+#                         balances[token] = str(Decimal(balance) / Decimal(10**6))
+#                 except Exception as token_error:
+#                     print(f"Error fetching {token} balance: {str(token_error)}")
+#                     # Keep the default 0 value if the fetch fails
+            
+#             transactions = Transaction.objects.filter(wallet=wallet).order_by('-created_at')[:10]
+            
+#             return Response({
+#                 'address': wallet.public_address,
+#                 'balances': balances,
+#                 'transactions': [
+#                     {
+#                         'tx_hash': tx.tx_hash,
+#                         'amount': str(abs(tx.amount)),
+#                         'to_address': tx.to_address,
+#                         'status': tx.status,
+#                         'time': tx.created_at,
+#                         'token_symbol': tx.token_symbol if tx.token_symbol else 'ETH'
+#                     } for tx in transactions
+#                 ]
+#             })
+            
+#         except Wallet.DoesNotExist:
+#             return Response(
+#                 {'error': 'Wallet not found'},
+#                 status=status.HTTP_404_NOT_FOUND
+#             )
+#         except Exception as e:
+#             return Response(
+#                 {'error': f'Failed to load dashboard: {str(e)}'},
+#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#             )
+
 
 
 

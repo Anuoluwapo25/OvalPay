@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 
 def get_actual_balance(wallet_address):
-    infura_url = f"https://base-sepolia.g.alchemy.com/v2/{settings.ALCHEMY_API_KEY}"
+    infura_url = f"https://base-sepolia.g.alchemy.com/v2/{settings.ALCHEMY_PROJECT_ID}"
     w3 = Web3(Web3.HTTPProvider(infura_url))
     
     try:

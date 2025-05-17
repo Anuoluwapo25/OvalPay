@@ -7,6 +7,9 @@ from .views import (create_wallet, RegisterView,
                     yellowcard_webhook, TokenBalanceView,
                     TransactionHistoryView, GasEstimateView)
 
+
+
+
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'), 
     path('wallet/create/', create_wallet, name='create-wallet'),

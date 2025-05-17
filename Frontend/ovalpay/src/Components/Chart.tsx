@@ -45,23 +45,25 @@ export const Chart: React.FC<ChartProps> = ({ data }) => {
         </svg>
       </div>
       
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <p className="text-gray-400 text-xs">Current Price</p>
-          <p className="font-semibold">${data.current_price.toLocaleString()}</p>
-        </div>
-        <div>
-          <p className="text-gray-400 text-xs">24h Change</p>
-          <p className={`font-semibold ${
-            data.price_change_percentage_24h >= 0 ? 'text-green-400' : 'text-red-400'
-          }`}>
-            {data.price_change_percentage_24h.toFixed(2)}%
-          </p>
-        </div>
-        <div>
-          <p className="text-gray-400 text-xs">24h Volume</p>
-          <p className="font-semibold">${(data.total_volume / 1000000).toFixed(1)}M</p>
-        </div>
+      <div className="flex justify-center w-full">
+        <div className="grid grid-cols-3 gap-x-80">
+          <div>
+            <p className="text-gray-400 text-xs">Current Price</p>
+            <p className="font-semibold">${data.current_price.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-xs">24h Change</p>
+            <p className={`font-semibold ${
+              data.price_change_percentage_24h >= 0 ? 'text-green-400' : 'text-red-400'
+            }`}>
+              {data.price_change_percentage_24h.toFixed(2)}%
+            </p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-xs">24h Volume</p>
+            <p className="font-semibold">${(data.total_volume / 1000000).toFixed(1)}M</p>
+          </div>
+      </div>
       </div>
     </div>
   );
