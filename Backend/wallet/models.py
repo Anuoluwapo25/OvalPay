@@ -92,6 +92,7 @@ class Transaction(models.Model):
         super().save(*args, **kwargs)
 
 
+
 class Token(models.Model):
     symbol = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)

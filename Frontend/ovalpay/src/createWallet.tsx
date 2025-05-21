@@ -7,7 +7,6 @@ function CreateWallet() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirect to login if no token exists
     if (!localStorage.getItem('token')) {
       navigate('/login');
     }

@@ -5,6 +5,9 @@ import WalletDashboard from './Dashboard';
 import Register from './Register';
 import Wallet from './WalletDashboard';
 import OldDash from './OldDashboard';
+import All from './all_dashboard';
+import Firebase from './Auth';
+import LoginAuth from './Login_auth';
 
 function App() {
   return (
@@ -17,6 +20,9 @@ function App() {
         <Route path="/wallet-dashboard" element={<Wallet />} />
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Register />} /> 
+        <Route path="/all_wallet" element={<All />} />
+        <Route path="/auth" element={<Firebase />} />
+        <Route path="/login_auth" element={<LoginAuth />} />
       </Routes>
     </Router>
   );

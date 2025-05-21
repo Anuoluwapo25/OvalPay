@@ -2,10 +2,7 @@ from django.urls import path
 from rest_framework.authtoken.views import obtain_auth_token
 
 from .views import (create_wallet, RegisterView,  
-                    WalletDashboardView, SendCryptoView, 
-                    YellowCardOnRampView, YellowCardOffRampView, 
-                    yellowcard_webhook, TokenBalanceView,
-                    TransactionHistoryView, GasEstimateView)
+                    WalletDashboardView, SendCryptoView)
 
 
 
@@ -16,12 +13,10 @@ urlpatterns = [
     path('wallet/dashboard/', WalletDashboardView.as_view(), name='wallet-dashboard'),
     path('wallet/send/', SendCryptoView.as_view(), name='send-crypto'),
     path('token-auth/', obtain_auth_token, name='api_token_auth'),
-    path('wallet/token-balances/', TokenBalanceView.as_view(), name='token-balances'),
-    path('wallet/transactions/', TransactionHistoryView.as_view(), name='transaction-history'),
-    path('wallet/gas-estimate/', GasEstimateView.as_view(), name='gas-estimate'),
-    path('yellowcard/on-ramp/', YellowCardOnRampView.as_view(), name='yellowcard-on-ramp'),
-    path('yellowcard/off-ramp/', YellowCardOffRampView.as_view(), name='yellowcard-off-ramp'),
-    path('webhooks/yellowcard/', yellowcard_webhook, name='yellowcard-webhook'),
+    # path('wallet/token-balances/', TokenBalanceView.as_view(), name='token-balances'),
+    # path('wallet/transactions/', TransactionHistoryView.as_view(), name='transaction-history'),
+    # path('wallet/gas-estimate/', GasEstimateView.as_view(), name='gas-estimate'),
+
 
 
 ]

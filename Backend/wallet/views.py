@@ -680,4 +680,6 @@ def yellowcard_webhook(request):
         except Transaction.DoesNotExist:
             pass
     
+
     return Response(status=status.HTTP_200_OK)
+
