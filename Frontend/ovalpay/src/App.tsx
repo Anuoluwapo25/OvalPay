@@ -8,6 +8,7 @@ import OldDash from './OldDashboard';
 import All from './all_dashboard';
 import Firebase from './Auth';
 import LoginAuth from './Login_auth';
+import Paystack from './paystack';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/all_wallet" element={<All />} />
         <Route path="/auth" element={<Firebase />} />
         <Route path="/login_auth" element={<LoginAuth />} />
+        <Route path="/payment" element={<Paystack />} />
       </Routes>
     </Router>
   );
