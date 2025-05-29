@@ -9,6 +9,7 @@ import All from './all_dashboard';
 import Firebase from './Auth';
 import LoginAuth from './Login_auth';
 import Paystack from './paystack';
+import Multi from './Muitichain_dashboard';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/dashboard" element={<WalletDashboard />} />
         <Route path="/old_dashboard" element={<OldDash />} />
         <Route path="/wallet-dashboard" element={<Wallet />} />
+        <Route path="/muilti_dashboard" element={<Multi />} />
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Register />} /> 
         <Route path="/all_wallet" element={<All />} />

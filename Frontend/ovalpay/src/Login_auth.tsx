@@ -27,7 +27,8 @@ function Login() {
     );
       
       localStorage.setItem('token', response.data.token);
-      navigate('/create-wallet');
+      localStorage.setItem('walletAddress', response.data.address);
+      navigate('/old_dashboard');
     } catch (err) {
       setError('Firebase login failed');
       console.error(err);
@@ -43,7 +44,7 @@ function Login() {
       });
       
       localStorage.setItem('token', response.data.token);
-      navigate('/create-wallet');
+      navigate('/old_dashboard');
     } catch (err) {
       // If regular login fails, try Firebase
       try {

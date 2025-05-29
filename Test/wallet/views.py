@@ -3,12 +3,15 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.views import ObtainAuthToken
+
 from rest_framework.authtoken.models import Token
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
 from .models import Wallet, Transaction
 from web3 import Web3
+from .models import Wallet
 import firebase_admin
 from firebase_admin import auth
 from rest_framework.exceptions import AuthenticationFailed
@@ -29,7 +32,9 @@ import hmac
 import hashlib
 import os
 
-# Chain configurations
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
 CHAIN_CONFIGS = {
     'ethereum': {
         'id': 11155111,
@@ -64,10 +69,10 @@ CHAIN_CONFIGS = {
             'usdt': '0x4A0D1092E9df255cf95D72834Ea9255132782318'
         }
     },
-    # Add more chains as needed
+ 
 }
 
-# Standard ERC-20 ABI
+
 ERC20_ABI = [
     {
         "constant": False,
@@ -96,56 +101,6 @@ ERC20_ABI = [
 ]
 
 
-
-# class RegisterView(APIView):
-#     permission_classes = [AllowAny]  # Add this line
-
-#     def post(self, request):
-#         id_token = request.data.get('idToken')  # From frontend
-        
-#         try:
-#             # Verify token (expiry, signature, etc.)
-#             decoded_token = auth.verify_id_token(id_token)
-#             uid = decoded_token['uid']
-            
-#             # Optional: Get fresh user data from Firebase
-#             firebase_user = auth.get_user(uid)
-
-#             if User.objects.filter(firebase_uid=uid).exists():
-#                 return Response(
-#                     {'error': 'User already registered'},
-#                     status=status.HTTP_400_BAD_REQUEST
-#                 )
-            
-#             # Now process registration
-#             serializer = UserSerializer(data={
-#                 'firebase_uid': uid,
-#                 # 'username': request.data.get('username'),
-#                 'email': firebase_user.email or request.data.get('email'),
-#                 'password': None  # Not needed if using only Firebase auth
-#             })
-#             if serializer.is_valid():
-#                 user = serializer.save()
-                
-#                 return Response({
-#                     'uid': uid,
-#                     'username': user.username,
-#                     'email': user.email
-#                 }, status=status.HTTP_201_CREATED)
-                
-#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
-
-#         except ValueError as e:
-#             raise AuthenticationFailed('Invalid Firebase token')
-#         except firebase_admin._auth_utils.UserNotFoundError:
-#             raise AuthenticationFailed('Firebase user not found')
-#         except Exception as e:
-#             return Response(
-#                 {'error': str(e)},
-#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
-#             )
-    
 
 
 class RegisterView(APIView):
@@ -193,22 +148,12 @@ class RegisterView(APIView):
             )
 
 
-from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.response import Response
-from rest_framework import status
-import firebase_admin
-from firebase_admin import auth
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
 
 class CustomAuthToken(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
         if 'idToken' in request.data:
             try:
-                print("Received token:", request.data.get('idToken'))
                 id_token = request.data['idToken']
-                print("Received token:", id_token)
                 decoded_token = auth.verify_id_token(id_token)
                 uid = decoded_token['uid']
                 
@@ -220,50 +165,38 @@ class CustomAuthToken(ObtainAuthToken):
                     }
                 )
                 
-                token, _ = Token.objects.get_or_create(user=user)
+                if not Wallet.objects.filter(user=user).exists():
+                    account = Web3().eth.account.create()
+                    Wallet.objects.create(
+                        user=user,
+                        private_key=account.key.hex(),
+                        public_address=account.address,
+                        name=f"{user.username}'s Wallet"
+                    )
                 
+                token, _ = Token.objects.get_or_create(user=user)
                 return Response({
                     'token': token.key,
-                    'user_id': user.pk,
-                    'username': user.username
+                    'address': user.wallet.public_address  
                 })
                 
-            except ValueError as e:
-                return Response(
-                    {'error': 'Invalid Firebase token'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
             except Exception as e:
-                return Response(
-                    {'error': str(e)},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({'error': str(e)}, status=400)
         
-        return super().post(request, *args, **kwargs)
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            user = User.objects.get(username=request.data['username'])
+            if not Wallet.objects.filter(user=user).exists():
+                account = Web3().eth.account.create()
+                Wallet.objects.create(
+                    user=user,
+                    private_key=account.key.hex(),
+                    public_address=account.address,
+                    name=f"{user.username}'s Wallet"
+                )
+            response.data['address'] = user.wallet.public_address
+        return response
 
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def create_wallet(request):
-    if Wallet.objects.filter(user=request.user).exists():
-        return JsonResponse(
-            {'error': 'User already has a wallet'}, 
-            status=400
-        )
-    
-    account = Web3().eth.account.create()
-    
-    wallet = Wallet.objects.create(
-        user=request.user,
-        private_key=account.key.hex(),
-        public_address=account.address,
-        name=request.data.get('name', 'MultiChain Wallet')
-    )
-    
-    return JsonResponse({
-        'address': account.address,
-        'message': 'Wallet created successfully'
-    })
 
 
 class SendCryptoView(APIView):
@@ -277,6 +210,7 @@ class SendCryptoView(APIView):
             token = request.data.get('token', 'native').lower()
             chain = request.data.get('chain', 'ethereum').lower()
 
+            # Validate input
             if chain not in CHAIN_CONFIGS:
                 return Response(
                     {'error': 'Unsupported chain'},
@@ -291,23 +225,44 @@ class SendCryptoView(APIView):
 
             chain_config = CHAIN_CONFIGS[chain]
             w3 = Web3(Web3.HTTPProvider(chain_config['rpc_url']))
+            
             if not w3.is_connected():
                 return Response(
                     {'error': 'Failed to connect to blockchain'},
                     status=status.HTTP_503_SERVICE_UNAVAILABLE
                 )
 
+            # Format private key properly
+            private_key = wallet.private_key
+            if private_key.startswith('0x'):
+                private_key = private_key[2:]
+            
+            account = Account.from_key(private_key)
+            
             if token == 'native':
+                # Native currency transfer
+                balance = w3.eth.get_balance(wallet.public_address)
+                gas_price = w3.eth.gas_price
+                gas_cost = gas_price * 21000  # Base gas for simple transfers
+                amount_wei = w3.to_wei(str(amount), 'ether')
+                
+                if balance < (amount_wei + gas_cost):
+                    return Response(
+                        {'error': 'Insufficient funds for transaction (including gas)'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
                 tx = {
                     'chainId': chain_config['id'],
                     'to': to_address,
-                    'value': w3.to_wei(str(amount), 'ether'),
+                    'value': amount_wei,
                     'gas': 21000,
-                    'gasPrice': w3.eth.gas_price,
+                    'gasPrice': gas_price,
                     'nonce': w3.eth.get_transaction_count(wallet.public_address),
                 }
             else:
-                if token not in chain_config['tokens']:
+                # Token transfer
+                if token not in chain_config['tokens'] or not chain_config['tokens'][token]:
                     return Response(
                         {'error': 'Unsupported token for this chain'},
                         status=status.HTTP_400_BAD_REQUEST
@@ -321,64 +276,64 @@ class SendCryptoView(APIView):
                 try:
                     decimals = contract.functions.decimals().call()
                 except:
-                    decimals = 18  
+                    decimals = 18
                 
                 token_amount = int(amount * (10 ** decimals))
                 
+                # Check token balance
+                token_balance = contract.functions.balanceOf(wallet.public_address).call()
+                if token_balance < token_amount:
+                    return Response(
+                        {'error': 'Insufficient token balance'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Build transaction with proper gas estimation
                 tx = contract.functions.transfer(
                     to_address,
                     token_amount
                 ).build_transaction({
                     'chainId': chain_config['id'],
-                    'gas': 100000,
-                    'gasPrice': w3.eth.gas_price,
+                    'from': wallet.public_address,
                     'nonce': w3.eth.get_transaction_count(wallet.public_address),
                 })
-
-            try:
-                private_key = wallet.private_key
-                if private_key.startswith('0x'):
-                    private_key = private_key[2:]
                 
-                account = Account.from_key(private_key)
-                signed_tx = account.sign_transaction(tx)
-                
-                if hasattr(signed_tx, 'rawTransaction'):
-                    raw_tx = signed_tx.rawTransaction
-                elif hasattr(signed_tx, 'raw_transaction'):
-                    raw_tx = signed_tx.raw_transaction
-                else:
-                    raw_tx = signed_tx['rawTransaction'] if isinstance(signed_tx, dict) else None
-                
-                if not raw_tx:
-                    raise ValueError("Could not extract raw transaction data")
-
-                tx_hash = w3.eth.send_raw_transaction(raw_tx)
-
-                Transaction.objects.create(
-                    wallet=wallet,
-                    tx_hash=tx_hash.hex(),
-                    amount=-amount,
-                    to_address=to_address,
-                    token_symbol=token.upper() if token != 'native' else chain_config['native_currency'],
-                    status='COMPLETED',
-                    chain=chain
-                )
-
-                return Response({
-                    'status': 'Transaction submitted',
-                    'tx_hash': tx_hash.hex(),
-                    'explorer_url': f"{chain_config['explorer']}/tx/{tx_hash.hex()}"
-                })
-
-            except ValueError as e:
-                error_msg = str(e)
-                if any(msg in error_msg.lower() for msg in ['insufficient funds', 'gas required exceeds allowance']):
+                # Estimate gas properly
+                try:
+                    tx['gas'] = contract.functions.transfer(
+                        to_address,
+                        token_amount
+                    ).estimate_gas({
+                        'from': wallet.public_address
+                    })
+                except Exception as e:
                     return Response(
-                        {'error': 'Insufficient funds for transaction'},
+                        {'error': f'Gas estimation failed: {str(e)}'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-                return Response({'error': f'Transaction signing failed: {error_msg}'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                tx['gasPrice'] = w3.eth.gas_price
+
+            # Sign and send transaction
+            signed_tx = account.sign_transaction(tx)
+            tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+            # Save transaction record
+            Transaction.objects.create(
+                wallet=wallet,
+                tx_hash=tx_hash.hex(),
+                amount=-amount,
+                to_address=to_address,
+                token_symbol=token.upper() if token != 'native' else chain_config['native_currency'],
+                status='PENDING',  # Start as pending, can update later
+                chain=chain
+            )
+
+            return Response({
+                'status': 'Transaction submitted',
+                'tx_hash': tx_hash.hex(),
+                'explorer_url': f"{chain_config['explorer']}/tx/{tx_hash.hex()}"
+            })
 
         except Wallet.DoesNotExist:
             return Response(
@@ -390,8 +345,7 @@ class SendCryptoView(APIView):
                 {'error': f'Transaction failed: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
+        
 
 
 class WalletDashboardView(APIView):
@@ -402,23 +356,33 @@ class WalletDashboardView(APIView):
             wallet = Wallet.objects.get(user=request.user)
             chain = request.query_params.get('chain', 'ethereum').lower()
             
-            try:
-                bc = BlockchainConnection(chain)
-            except ValueError as e:
-                return Response({'error': str(e)}, status=400)
-            except ConnectionError as e:
-                return Response({'error': str(e)}, status=503)
+            if chain not in CHAIN_CONFIGS:
+                return Response({'error': 'Unsupported chain'}, status=400)
             
-            balances = {
-                'native': bc.get_native_balance(wallet.public_address),
-                'tokens': {}
-            }
+            chain_config = CHAIN_CONFIGS[chain]
+            w3 = Web3(Web3.HTTPProvider(chain_config['rpc_url']))
             
-            for token_symbol in bc.config['tokens'].keys():
-                balances['tokens'][token_symbol] = bc.get_token_balance(
-                    token_symbol,
-                    wallet.public_address
-                )
+            if not w3.is_connected():
+                return Response({'error': 'Failed to connect to blockchain'}, status=503)
+            
+            native_balance = w3.from_wei(
+                w3.eth.get_balance(wallet.public_address),
+                'ether'
+            )
+            
+            token_balances = {}
+            for token_symbol, token_address in chain_config['tokens'].items():
+                if token_address: 
+                    contract = w3.eth.contract(
+                        address=token_address,
+                        abi=ERC20_ABI
+                    )
+                    try:
+                        decimals = contract.functions.decimals().call()
+                        balance = contract.functions.balanceOf(wallet.public_address).call()
+                        token_balances[token_symbol] = balance / (10 ** decimals)
+                    except Exception as e:
+                        token_balances[token_symbol] = f"Error: {str(e)}"
             
             transactions = Transaction.objects.filter(
                 wallet=wallet,
@@ -427,7 +391,10 @@ class WalletDashboardView(APIView):
             
             return Response({
                 'address': wallet.public_address,
-                'balances': balances,
+                'balances': {
+                    'native': str(native_balance),
+                    'tokens': token_balances
+                },
                 'currentChain': chain,
                 'transactions': [
                     {
@@ -450,3 +417,4 @@ class WalletDashboardView(APIView):
                 {'error': 'Internal server error'},
                 status=500
             )
+
