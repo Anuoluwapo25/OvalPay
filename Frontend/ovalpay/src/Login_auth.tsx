@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { auth } from './firebase'; 
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { Wallet } from 'lucide-react';
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -28,7 +29,7 @@ function Login() {
       
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('walletAddress', response.data.address);
-      navigate('/old_dashboard');
+      navigate('/muilti_dashboard');
     } catch (err) {
       setError('Firebase login failed');
       console.error(err);
@@ -44,7 +45,7 @@ function Login() {
       });
       
       localStorage.setItem('token', response.data.token);
-      navigate('/old_dashboard');
+      navigate('/muilti_dashboard');
     } catch (err) {
       // If regular login fails, try Firebase
       try {
@@ -57,25 +58,32 @@ function Login() {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded-lg shadow">
+    <div>
+      <div className="flex items-center mt-5 ml-3 space-x-3">
+            <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
+                    <Wallet className="w-6 h-6 text-white" />
+              </div>
+                <h1 className="text-2xl font-bold text-black">PayWallet</h1>
+        </div>
+    <div className="max-w-md mx-auto mt-20 p-6 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg shadow">
       <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
       {error && <div className="mb-4 text-red-500">{error}</div>}
       <form onSubmit={handleRegularLogin}>
         <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="username">
+          <label className="block  text-white mb-2" htmlFor="username">
             Username or Email
           </label>
           <input
             id="username"
             type="text"
-            className="w-full p-2 border rounded"
+            className="w-full bg-white p-2 border rounded"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
           />
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 mb-2" htmlFor="password">
+          <label className="block text-white mb-2" htmlFor="password">
             Password
           </label>
           <input
@@ -89,14 +97,15 @@ function Login() {
         </div>
         <button
           type="submit"
-          className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600"
+          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 rounded hover:bg-green-600"
         >
           Login
         </button>
       </form>
       <div className="mt-4 text-center">
-        <p>Don't have an account? <a href="/register" className="text-blue-500 hover:underline">Register</a></p>
+        <p className='text-white'>Don't have an account? <a href="/register" className="text-purple-500 hover:underline">Register</a></p>
       </div>
+    </div>
     </div>
   );
 }

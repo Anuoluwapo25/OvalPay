@@ -72,7 +72,7 @@ const MultiChainWalletDashboard: React.FC = () => {
   const [sendLoading, setSendLoading] = useState<boolean>(false);
 
   // You should store this token in localStorage or context after login
-  const authToken: string = localStorage.getItem('token') || '';
+  const authToken: string = localStorage.getItem('authToken') || '';
 
   // Chain configurations matching your backend
   const chainConfigs: Record<ChainKey, ChainConfig> = {
@@ -86,7 +86,7 @@ const MultiChainWalletDashboard: React.FC = () => {
       tokens: ['USDC', 'USDT']
     },
     base: {
-      id: 84532,
+      id: 84531,
       name: 'Base Sepolia',
       explorer: 'https://basescan.org',
       nativeCurrency: 'ETH',
@@ -216,14 +216,14 @@ const MultiChainWalletDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Header */}
-      <div className="bg-black/20 backdrop-blur-xl border-b border-gray-700/50 sticky top-0 z-40">
+      <div className="bg-black/20 backdrop-blur-xl border-b border-gray-700/50">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
                 <Wallet className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-2xl font-bold text-white">PayWallet</h1>
+              <h1 className="text-2xl font-bold text-white">Crypto Wallet</h1>
             </div>
             
             <div className="flex items-center space-x-4">
@@ -236,7 +236,7 @@ const MultiChainWalletDashboard: React.FC = () => {
                 <Send className="w-4 h-4" />
                 <span>Send</span>
               </button>
-
+            
               {/* Chain Selector */}
               <div className="relative">
                 <button
@@ -249,34 +249,24 @@ const MultiChainWalletDashboard: React.FC = () => {
                 </button>
                 
                 {dropdownOpen && (
-                  <>
-                    {/* Backdrop to close dropdown */}
-                    <div 
-                      className="fixed inset-0 z-[100]" 
-                      onClick={() => setDropdownOpen(false)}
-                    />
-                    {/* Dropdown Menu */}
-                    <div className="absolute right-0 top-full mt-2 w-64 bg-gray-800/95 backdrop-blur-xl border border-gray-700/50 rounded-xl shadow-2xl z-[101]">
-                      {Object.entries(chainConfigs).map(([key, config]) => (
-                        <button
-                          key={key}
-                          onClick={() => {
-                            setSelectedChain(key as ChainKey);
-                            setDropdownOpen(false);
-                          }}
-                          className={`w-full flex items-center space-x-3 px-4 py-3 text-left text-white hover:bg-gray-700/50 first:rounded-t-xl last:rounded-b-xl transition-all duration-200 ${
-                            selectedChain === key ? 'bg-gray-700/30' : ''
-                          }`}
-                        >
-                          <span className="text-xl">{config.icon}</span>
-                          <div>
-                            <div className="font-medium">{config.name}</div>
-                            <div className="text-sm text-gray-400">{config.nativeCurrency}</div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </>
+                  <div className="absolute right-0 mt-2 w-64 bg-gray-800/90 backdrop-blur-xl border border-gray-700/50 rounded-xl shadow-2xl z-50">
+                    {Object.entries(chainConfigs).map(([key, config]) => (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          setSelectedChain(key as ChainKey);
+                          setDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-left text-white hover:bg-gray-700/50 first:rounded-t-xl last:rounded-b-xl transition-all duration-200"
+                      >
+                        <span className="text-xl">{config.icon}</span>
+                        <div>
+                          <div className="font-medium">{config.name}</div>
+                          <div className="text-sm text-gray-400">{config.nativeCurrency}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -418,7 +408,7 @@ const MultiChainWalletDashboard: React.FC = () => {
 
         {/* Send Crypto Modal */}
         {showSendModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[200]">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-md mx-4">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-white">Send Crypto</h3>
