@@ -19,7 +19,7 @@ cffi==1.17.1
 charset-normalizer==3.4.1
 ckzg==2.1.1
 construct==2.10.68
-construct-typing<0.7.0 and >=0.6.2
+construct-typing>=0.6.2,<0.7.0
 cryptography==44.0.2
 cytoolz==1.0.1
 Django==5.2.1
