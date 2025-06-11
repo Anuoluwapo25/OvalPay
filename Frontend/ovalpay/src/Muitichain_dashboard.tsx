@@ -263,7 +263,7 @@ const MultiChainWalletDashboard: React.FC = () => {
               <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
                 <Wallet className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-2xl font-bold text-white">PayWallet</h1>
+              <h1 className="text-2xl font-bold text-white">PayVest</h1>
             </div>
             
             <div className="flex items-center space-x-4">

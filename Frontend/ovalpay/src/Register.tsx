@@ -27,7 +27,6 @@ function Register() {
     e.preventDefault();
     setError('');
 
-    // Validation
     if (formData.password !== formData.password2) {
       setError('Passwords do not match');
       return;
@@ -41,17 +40,14 @@ function Register() {
     try {
       setIsLoading(true);
 
-      // 1. Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         formData.email,
         formData.password
       );
 
-      // 2. Get Firebase ID token
       const idToken = await userCredential.user.getIdToken();
 
-      // 3. Send token to your backend
       const response = await axios.post(
         'http://127.0.0.1:8000/api/register/',
         {
@@ -64,12 +60,10 @@ function Register() {
         }
       );
 
-      // 4. Store the response data
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('walletAddress', response.data.address);
       localStorage.setItem('user', JSON.stringify(response.data.user));
 
-      // 5. Navigate to dashboard
       navigate('/muilti_dashboard');
     } catch (err) {
       console.error('Registration error:', err);
@@ -84,12 +78,12 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen from-blue-100 to-purple-100">
       <div className="flex items-center mt-5 ml-3 space-x-3">
         <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
           <Wallet className="w-6 h-6 text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-black">PayWallet</h1>
+        <h1 className="text-2xl mt-3 font-bold text-black">PayVest</h1>
       </div>
       <div className="max-w-md mx-auto mt-10 p-6 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-lg shadow-lg">
         <h2 className="text-2xl font-bold mb-6 text-center text-white">Register</h2>
@@ -179,7 +173,7 @@ function Register() {
           <div className="mt-4 text-center">
             <p className="text-gray-400">
               Already have an account?{' '}
-              <a href="/login" className="text-purple-400 hover:underline font-medium">
+              <a href="/login_auth" className="text-purple-400 hover:underline font-medium">
                 Login
               </a>
             </p>
