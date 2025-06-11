@@ -18,7 +18,7 @@ function Login() {
       console.log("Firebase token:", idToken);
       
       
-      const response = await axios.post('http://127.0.0.1:8000/api/token-auth/', 
+      const response = await axios.post('https://payvest.onrender.com/api/token-auth/', 
       { idToken },  
       {
         headers: {
@@ -39,7 +39,7 @@ function Login() {
   const handleRegularLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/token-auth/', {
+      const response = await axios.post('https://payvest.onrender.com/api/token-auth/', {
         username,
         password
       });
@@ -103,7 +103,7 @@ function Login() {
         </button>
       </form>
       <div className="mt-4 text-center">
-        <p className='text-white'>Don't have an account? <a href="/register" className="text-purple-500 hover:underline">Register</a></p>
+        <p className='text-white'>Don't have an account? <a href="/" className="text-purple-500 hover:underline">Register</a></p>
       </div>
     </div>
     </div>

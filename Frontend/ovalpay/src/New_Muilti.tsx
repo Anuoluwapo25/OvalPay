@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, RefreshCw, Copy, ExternalLink, ChevronDown, TrendingUp, Send, AlertCircle } from 'lucide-react';
 
-// Type definitions
 interface ChainConfig {
   id: number;
   name: string;
@@ -71,10 +70,8 @@ const MultiChainWalletDashboard: React.FC = () => {
   });
   const [sendLoading, setSendLoading] = useState<boolean>(false);
 
-  // You should store this token in localStorage or context after login
   const authToken: string = localStorage.getItem('authToken') || '';
 
-  // Chain configurations matching your backend
   const chainConfigs: Record<ChainKey, ChainConfig> = {
     ethereum: {
       id: 11155111,
@@ -105,7 +102,6 @@ const MultiChainWalletDashboard: React.FC = () => {
     }
   };
 
-  // API call to fetch wallet data
   const fetchWalletData = async (chain: ChainKey): Promise<void> => {
     setLoading(true);
     setError(null);
@@ -132,7 +128,6 @@ const MultiChainWalletDashboard: React.FC = () => {
     }
   };
 
-  // API call to send crypto
   const sendCrypto = async (): Promise<void> => {
     setSendLoading(true);
     try {
@@ -158,7 +153,6 @@ const MultiChainWalletDashboard: React.FC = () => {
         throw new Error(data.error || 'Transaction failed');
       }
 
-      // Show success and refresh wallet data
       alert(`Transaction submitted successfully! TX Hash: ${data.tx_hash}`);
       setShowSendModal(false);
       setSendForm({ amount: '', address: '', token: 'native' });
@@ -192,7 +186,6 @@ const MultiChainWalletDashboard: React.FC = () => {
   const calculateTotalValue = (): string => {
     if (!walletData || !walletData.balances) return '0.00';
     
-    // Mock pricing - you might want to integrate with a price API
     const ethPrice = 2000;
     const maticPrice = 0.8;
     const usdcPrice = 1;

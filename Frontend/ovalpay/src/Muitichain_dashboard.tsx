@@ -123,7 +123,7 @@ const MultiChainWalletDashboard: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/wallet/dashboard?chain=${chain}`, {
+      const response = await fetch(`https://payvest.onrender.com/api/wallet/dashboard?chain=${chain}`, {
         method: 'GET',
         headers: {
           'Authorization': `Token ${authToken}`,
@@ -155,7 +155,7 @@ const MultiChainWalletDashboard: React.FC = () => {
         chain: selectedChain
       };
 
-      const response = await fetch('http://127.0.0.1:8000/api/wallet/send/', {
+      const response = await fetch('https://payvest.onrender.com/api/wallet/send/', {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authToken}`,
