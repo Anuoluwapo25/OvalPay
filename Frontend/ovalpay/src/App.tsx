@@ -3,7 +3,6 @@ import Login from './Login';
 import CreateWallet from './createWallet';
 import WalletDashboard from './Dashboard';
 import Register from './Register';
-import Wallet from './WalletDashboard';
 import OldDash from './OldDashboard';
 import All from './all_dashboard';
 import Firebase from './Auth';
@@ -19,7 +18,6 @@ function App() {
         <Route path="/create-wallet" element={<CreateWallet />} />
         <Route path="/dashboard" element={<WalletDashboard />} />
         <Route path="/old_dashboard" element={<OldDash />} />
-        <Route path="/wallet-dashboard" element={<Wallet />} />
         <Route path="/muilti_dashboard" element={<Multi />} />
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Register />} /> 

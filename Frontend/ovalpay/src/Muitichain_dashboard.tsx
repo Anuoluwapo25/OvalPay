@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, RefreshCw, Copy, ExternalLink, ChevronDown, TrendingUp, Send, AlertCircle } from 'lucide-react';
 
-// Enhanced type definitions
 interface ChainConfig {
   id: number;
   name: string;
@@ -171,13 +170,11 @@ const MultiChainWalletDashboard: React.FC = () => {
         throw new Error(data.error || 'Transaction failed');
       }
 
-      // Show success and store transaction details
       setSuccessTx({
         hash: data.tx_hash,
         url: data.explorer_url
       });
       
-      // Reset form and refresh data
       setSendForm({ amount: '', address: '', token: 'native' });
       fetchWalletData(selectedChain);
       
@@ -200,7 +197,6 @@ const MultiChainWalletDashboard: React.FC = () => {
 
   const formatAddress = (address: string): string => {
     if (!address) return '';
-    // Handle Solana addresses (typically longer)
     if (selectedChain === 'solana') {
       return `${address.slice(0, 4)}...${address.slice(-4)}`;
     }
@@ -214,7 +210,6 @@ const MultiChainWalletDashboard: React.FC = () => {
   const calculateTotalValue = (): string => {
     if (!walletData || !walletData.balances) return '0.00';
     
-    // Mock pricing
     const ethPrice = 2000;
     const maticPrice = 0.8;
     const solPrice = 150;
