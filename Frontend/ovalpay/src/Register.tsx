@@ -49,7 +49,7 @@ function Register() {
       const idToken = await userCredential.user.getIdToken();
 
       const response = await axios.post(
-        'http://127.0.0.1:8000/api/register/',
+        'https://payvest.onrender.com/api/register/',
         {
           idToken
         },
